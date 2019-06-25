@@ -5,19 +5,73 @@
 
 //define the blocks and replacement entities
 //key: block name
-//val: entity name
+//val: key:val settings
+//entity_identifier: name of the entity to replace with
+//immobile: true: the script will keep setting the location of the entity to the placed location
 var replacementDictionary = {
     //example: when player places a block of cobblestone, change it to a chicken
-    "minecraft:cobblestone": "minecraft:chicken"
+    "minecraft:cobblestone": { entity_identifier: "miencraft:chickent", is_immobile: true }
 };
+
+//identifier for the immobile component
+const _immobileComponentIdentifier = "flippy_utils:immobile";
 
 //set up the server system
 var serverSystem = server.registerSystem(0, 0);
 
 // Setup which events to listen for
 serverSystem.initialize = function () {
+    //register components
+    //immobile component to keep an entity in one place
+    serverSystem.registerComponent(_immobileComponentIdentifier, { position: { x: 0, y: 0, z: 0 } });
+
+    //queries
+    //pull all entities with the immobile component
+    serverSystem.immobileQuery = serverSystem.registerQuery();
+    //not currently using the filter since custom components aren't persisted -- need to loop through all entities anyway
+    //serverSystem.addFilterToQuery(serverSystem.immobileQuery, _immobileComponentIdentifier);
+
+
+
+    //event listeners
     serverSystem.listenForEvent("minecraft:player_placed_block", (eventData) => serverSystem.onPlacedBlock(eventData));
 }
+
+serverSystem.update = function () {
+    //every tick:
+    //pull all entities with "flippy_utils:immobile" component and set their location
+    //TODO: need a way to handle reloading the world (pull all ents in replacement dictionary and add the component?)
+
+    let ents = serverSystem.getEntitiesFromQuery(serverSystem.immobileQuery);
+    for (let e = 0; e < ents.length; e++) {
+        let ent = ents[e];
+
+        //only process ents that are set up in the dictionary and should be immobile
+        if (Object.values(replacementDictionary).find(d => d.entity_identifier === ent.__identifier__ && d.is_immobile)) {
+            //get position component
+            let position = serverSystem.getComponent(ent, "minecraft:position");
+
+            //get the immobile component
+            let immobile = serverSystem.getComponent(ent, _immobileComponentIdentifier);
+
+            if (immobile === null) {
+                immobile = addImmobleComponent(ent, position.data);
+            }
+
+            position.data.x = immobile.data.position.x;
+            position.data.y = immobile.data.position.y;
+            position.data.z = immobile.data.position.z;
+
+            serverSystem.applyComponentChanges(ent, position);
+        }
+    }
+}
+
+serverSystem.chat = function (message) {
+    const eventData = serverSystem.createEventData("minecraft:display_chat_event");
+    eventData.data.message = message;
+    serverSystem.broadcastEvent("minecraft:display_chat_event", eventData);
+};
 
 serverSystem.onPlacedBlock = function (eventData) {
     let player = eventData.data.player;
@@ -32,21 +86,22 @@ serverSystem.onPlacedBlock = function (eventData) {
 
         //only continue if the block is in the replacement dictionary
         if (replacementDictionary.hasOwnProperty(placedBlock.__identifier__)) {
-            
+            let replacementInfo = replacementDictionary[placedBlock.__identifier__];
+
             //remove original placed block at position
             serverSystem.executeCommand(`/setblock ${position.x} ${position.y} ${position.z} air`, (commandResultData) => {
                 //spawn the entity after the block is removed
-                spawnEntity(replacementDictionary[placedBlock.__identifier__], position);
+                spawnEntity(replacementInfo, position);
             });
         }
     }
 }
 
 //spawn an entity at location
-//entityIdentifierName = the identifier name (e.g. "minecraft:pig")
+//entityInfo = the entity replacement info
 //position = (x,y,z) coords at which to spawn the entity
-function spawnEntity(entityIdentifierName, position) {
-    let ent = serverSystem.createEntity("entity", entityIdentifierName);
+function spawnEntity(entityInfo, position) {
+    let ent = serverSystem.createEntity("entity", entityInfo.entity_identifier);
     if (ent !== null) {
         //set the position
         //adjust entity position to be in the middle of the block square
@@ -56,5 +111,25 @@ function spawnEntity(entityIdentifierName, position) {
         ent_position.data.z = position.z + 0.5;
 
         serverSystem.applyComponentChanges(ent, ent_position);
+
+        //add the immobile component if necessary
+        if (entityInfo.is_immobile) {
+            addImmobleComponent(ent, ent_position.data);
+        }
     }
+}
+
+//adds the immoble component to an entity
+//returns the immobile component
+function addImmobleComponent(entity, position) {
+    //create an "flippy_utils:immobile" component
+    let immobileComponent = serverSystem.createComponent(entity, _immobileComponentIdentifier);
+
+    //set the position
+    immobileComponent.data.position = position;
+
+    //save the changes
+    serverSystem.applyComponentChanges(entity, immobileComponent);
+
+    return immobileComponent;
 }
