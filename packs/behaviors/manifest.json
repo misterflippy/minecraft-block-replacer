@@ -1,0 +1,25 @@
+{
+    "format_version": 1,
+    "header": {
+        "name": "Block Replacer",
+        "description": "Allows other add-ons to replace blocks with entities",
+        "uuid": "3725AD81-8CF0-49F4-B25E-20C152D759DC",
+        "version": [
+            1,
+            0,
+            0
+        ]
+    },
+    "modules": [
+        {
+            "description": "behaviours for Addon-B",
+            "type": "client_data",
+            "uuid": "209791E9-4A37-433B-9826-E54CEE5B7552",
+            "version": [
+                1,
+                0,
+                0
+            ]
+        }
+    ]
+}
