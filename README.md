@@ -6,7 +6,7 @@ Replaces blocks with entities when the blocks are placed. This add-on is designe
 
 ## Configure
 1. Add a dependency to your behavior pack manifest and add the minecraft-block-replacer UUID and version. This will automatically load the Block Replacer add-on when your behavior pack is added to a world.
-**Important:** When added to a world, the Block Replacer add-on must be in "Active Behavior Pack" list **below** packs that use it. This ensures it will load before the packs attempt to use it. Setting the dependency should handle this automatically.
+
 ```json
 "dependencies": [
     {
@@ -17,6 +17,9 @@ Replaces blocks with entities when the blocks are placed. This add-on is designe
     }
   ]
 ```
+
+**Important:** When added to a world, the Block Replacer add-on must be in "Active Behavior Pack" list **below** packs that use it. This ensures it will load before the packs attempt to use it. Setting the dependency should handle this automatically.
+
 2. In your server script initialize function, get a reference to the global block_replacer object:
 
 Example:
