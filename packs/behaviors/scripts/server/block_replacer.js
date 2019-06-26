@@ -3,15 +3,9 @@
 ///Replaces blocks with entities when the blocks are placed
 ///Usage: Drop this into your addon/behavior/scripts/server directory
 
-//define the blocks and replacement entities
-//key: block name
-//val: key:val settings
-//entity_identifier: name of the entity to replace with
-//immobile: true: the script will keep setting the location of the entity to the placed location
-var replacementDictionary = {
-    //example: when player places a block of cobblestone, change it to a chicken
-    "minecraft:cobblestone": { entity_identifier: "miencraft:chickent", is_immobile: true }
-};
+//set up a global variable that points to global this
+var global = {};
+var global_replacer = {};
 
 //identifier for the immobile component
 const _immobileComponentIdentifier = "flippy_utils:immobile";
@@ -21,6 +15,29 @@ var serverSystem = server.registerSystem(0, 0);
 
 // Setup which events to listen for
 serverSystem.initialize = function () {
+    global = (0, eval)('this');
+
+    //set up the global block replacer object
+    global_replacer = global["flippy_utils:block_replacer"] = {
+        //define the blocks and replacement entities
+        //key: block name
+        //val: key:val settings
+        //entity_identifier: name of the entity to replace with
+        //immobile: true: the script will keep setting the location of the entity to the placed location
+        replacementDictionary: {},
+
+        //register a replacement 
+        //block_identifier: the identifier of the block to replace
+        //entity_identifier: the identifier of the entity to replace with
+        //is_immobile: whether to keep the entity immobile at the placed location
+        registerReplacement: function (block_identifier, entity_identifier, is_immobile = false) {
+            this.replacementDictionary[block_identifier] = {
+                "entity_identifier": entity_identifier,
+                "is_immobile": is_immobile
+            }
+        }
+    }
+    
     //register components
     //immobile component to keep an entity in one place
     serverSystem.registerComponent(_immobileComponentIdentifier, { position: { x: 0, y: 0, z: 0 } });
@@ -30,8 +47,6 @@ serverSystem.initialize = function () {
     serverSystem.immobileQuery = serverSystem.registerQuery();
     //not currently using the filter since custom components aren't persisted -- need to loop through all entities anyway
     //serverSystem.addFilterToQuery(serverSystem.immobileQuery, _immobileComponentIdentifier);
-
-
 
     //event listeners
     serverSystem.listenForEvent("minecraft:player_placed_block", (eventData) => serverSystem.onPlacedBlock(eventData));
@@ -47,7 +62,7 @@ serverSystem.update = function () {
         let ent = ents[e];
 
         //only process ents that are set up in the dictionary and should be immobile
-        if (Object.values(replacementDictionary).find(d => d.entity_identifier === ent.__identifier__ && d.is_immobile)) {
+        if (Object.values(global_replacer.replacementDictionary).find(d => d.entity_identifier === ent.__identifier__ && d.is_immobile)) {
             //get position component
             let position = serverSystem.getComponent(ent, "minecraft:position");
 
@@ -85,8 +100,8 @@ serverSystem.onPlacedBlock = function (eventData) {
         let placedBlock = serverSystem.getBlock(tickingArea, position);
 
         //only continue if the block is in the replacement dictionary
-        if (replacementDictionary.hasOwnProperty(placedBlock.__identifier__)) {
-            let replacementInfo = replacementDictionary[placedBlock.__identifier__];
+        if (global_replacer.replacementDictionary.hasOwnProperty(placedBlock.__identifier__)) {
+            let replacementInfo = global_replacer.replacementDictionary[placedBlock.__identifier__];
 
             //remove original placed block at position
             serverSystem.executeCommand(`/setblock ${position.x} ${position.y} ${position.z} air`, (commandResultData) => {
