@@ -6,11 +6,8 @@
 var global = {};
 var global_replacer = {};
 
-//identifier for the immobile component
+//identifier for the block replacer key
 const _blockReplacerKey = "flippy_utils:block_replacer";
-
-//identifier for the immobile component
-const _immobileComponentIdentifier = "flippy_utils:immobile";
 
 //set up the server system
 var serverSystem = server.registerSystem(0, 0);
@@ -25,63 +22,23 @@ serverSystem.initialize = function () {
         //key: block name
         //val: key:val settings
         //entity_identifier: name of the entity to replace with
-        //immobile: true: the script will keep setting the location of the entity to the placed location
         replacementDictionary: {},
 
         //register a replacement 
         //block_identifier: the identifier of the block to replace
         //entity_identifier: the identifier of the entity to replace with
-        //is_immobile: whether to keep the entity immobile at the placed location
-        registerReplacement: function (block_identifier, entity_identifier, is_immobile = false) {
+        registerReplacement: function (block_identifier, entity_identifier) {
             this.replacementDictionary[block_identifier] = {
-                "entity_identifier": entity_identifier,
-                "is_immobile": is_immobile
+                "entity_identifier": entity_identifier
             }
         }
     }
     
-    //register components
-    //immobile component to keep an entity in one place
-    serverSystem.registerComponent(_immobileComponentIdentifier, { position: { x: 0, y: 0, z: 0 } });
-
-    //queries
-    //pull all entities with the immobile component
-    serverSystem.immobileQuery = serverSystem.registerQuery();
-    //not currently using the filter since custom components aren't persisted -- need to loop through all entities anyway
-    //serverSystem.addFilterToQuery(serverSystem.immobileQuery, _immobileComponentIdentifier);
-
     //event listeners
     serverSystem.listenForEvent("minecraft:player_placed_block", (eventData) => serverSystem.onPlacedBlock(eventData));
 }
 
 serverSystem.update = function () {
-    //every tick:
-    //pull all entities with "flippy_utils:immobile" component and set their location
-    //TODO: need a way to handle reloading the world (pull all ents in replacement dictionary and add the component?)
-
-    let ents = serverSystem.getEntitiesFromQuery(serverSystem.immobileQuery);
-    for (let e = 0; e < ents.length; e++) {
-        let ent = ents[e];
-
-        //only process ents that are set up in the dictionary and should be immobile
-        if (Object.values(global_replacer.replacementDictionary).find(d => d.entity_identifier === ent.__identifier__ && d.is_immobile)) {
-            //get position component
-            let position = serverSystem.getComponent(ent, "minecraft:position");
-
-            //get the immobile component
-            let immobile = serverSystem.getComponent(ent, _immobileComponentIdentifier);
-
-            if (immobile === null) {
-                immobile = addImmobleComponent(ent, position.data);
-            }
-
-            position.data.x = immobile.data.position.x;
-            position.data.y = immobile.data.position.y;
-            position.data.z = immobile.data.position.z;
-
-            serverSystem.applyComponentChanges(ent, position);
-        }
-    }
 }
 
 serverSystem.chat = function (message) {
@@ -129,24 +86,6 @@ function spawnEntity(entityInfo, position) {
 
         serverSystem.applyComponentChanges(ent, ent_position);
 
-        //add the immobile component if necessary
-        if (entityInfo.is_immobile) {
-            addImmobleComponent(ent, ent_position.data);
-        }
+        //removed immobile component -- use minecraft:pushable in the entity definition json file instead
     }
-}
-
-//adds the immoble component to an entity
-//returns the immobile component
-function addImmobleComponent(entity, position) {
-    //create an "flippy_utils:immobile" component
-    let immobileComponent = serverSystem.createComponent(entity, _immobileComponentIdentifier);
-
-    //set the position
-    immobileComponent.data.position = position;
-
-    //save the changes
-    serverSystem.applyComponentChanges(entity, immobileComponent);
-
-    return immobileComponent;
 }
