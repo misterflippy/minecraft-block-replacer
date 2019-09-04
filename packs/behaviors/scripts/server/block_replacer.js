@@ -1,11 +1,13 @@
 ///Block replacer
 ///Author: mrflippy
 ///Replaces blocks with entities when the blocks are placed
-///Usage: Drop this into your addon/behavior/scripts/server directory
 
 //set up a global variable that points to global this
 var global = {};
 var global_replacer = {};
+
+//identifier for the immobile component
+const _blockReplacerKey = "flippy_utils:block_replacer";
 
 //identifier for the immobile component
 const _immobileComponentIdentifier = "flippy_utils:immobile";
@@ -18,7 +20,7 @@ serverSystem.initialize = function () {
     global = (0, eval)('this');
 
     //set up the global block replacer object
-    global_replacer = global["flippy_utils:block_replacer"] = {
+    global_replacer = global[_blockReplacerKey] = {
         //define the blocks and replacement entities
         //key: block name
         //val: key:val settings
