@@ -1,3 +1,6 @@
+# Notice
+Since Mojang has deprecated the bedrock scripting API, this repository is now archived.
+
 # minecraft-block-replacer
 Replaces blocks with entities when the blocks are placed. This add-on is designed to be used by other add-ons and will not do much on its own.
 
